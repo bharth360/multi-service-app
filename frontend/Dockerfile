@@ -1,8 +1,13 @@
-FROM node:18
+# Use an official Node.js image to build the app
+FROM node:16 AS build
+
 WORKDIR /app
-COPY package.json ./
+COPY package*.json ./
 RUN npm install
 COPY . .
-CMD ["npm", "start"]
-EXPOSE 3000
+RUN npm run build
 
+# Serve the app with Nginx
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 3000
