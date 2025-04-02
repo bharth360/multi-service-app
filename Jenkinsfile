@@ -1,17 +1,32 @@
 pipeline {
     agent any
 
+    environment {
+        COMPOSE_FILE = "docker-compose.yml"
+    }
+
     stages {
         stage('Checkout Code') {
             steps {
-                git 'https://github.com/YOUR_GITHUB_USERNAME/multi-service-app.git'
+                git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/bharth360/multi-service-app.git'
             }
         }
 
-        stage('Build and Deploy') {
+        stage('Build Docker Images') {
             steps {
-                sh 'docker-compose down'
-                sh 'docker-compose up -d --build'
+                sh 'docker compose build'
+            }
+        }
+
+        stage('Deploy Services') {
+            steps {
+                sh 'docker compose up -d'
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh 'curl -f http://localhost || exit 1'
             }
         }
     }
@@ -19,9 +34,8 @@ pipeline {
     post {
         failure {
             mail to: 'bharateshshanavad@gmail.com',
-                 subject: "Deployment Failed",
-                 body: "The deployment failed. Please check Jenkins logs for details."
+                 subject: '🚨 Jenkins Deployment Failed!',
+                 body: 'The latest deployment of multi-service-app failed. Check Jenkins logs for details.'
         }
     }
 }
-
