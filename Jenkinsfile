@@ -4,6 +4,7 @@ pipeline {
         AWS_REGION = 'us-east-1'  
         ECR_REPO = 'react-frontend'
         AWS_ACCOUNT_ID = '009160053341'
+        IMAGE_TAG = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_NUMBER}"
     }
     stages {
         stage('Checkout Code') {
@@ -23,7 +24,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${ECR_REPO} ./frontend"
+                    sh "docker build -t ${ECR_REPO} ."
                 }
             }
         }
@@ -31,7 +32,7 @@ pipeline {
         stage('Tag Docker Image') {
             steps {
                 script {
-                    sh "docker tag ${ECR_REPO} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_NUMBER}"
+                    sh "docker tag ${ECR_REPO} ${IMAGE_TAG}"
                 }
             }
         }
@@ -39,7 +40,7 @@ pipeline {
         stage('Push Image to ECR') {
             steps {
                 script {
-                    sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_NUMBER}"
+                    sh "docker push ${IMAGE_TAG}"
                 }
             }
         }
@@ -48,7 +49,7 @@ pipeline {
             steps {
                 script {
                     sh "docker rmi ${ECR_REPO} || true"
-                    sh "docker rmi ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_NUMBER} || true"
+                    sh "docker rmi ${IMAGE_TAG} || true"
                 }
             }
         }
