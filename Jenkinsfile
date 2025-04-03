@@ -1,41 +1,57 @@
 pipeline {
     agent any
-
     environment {
-        COMPOSE_FILE = "docker-compose.yml"
+        AWS_REGION = 'us-east-1'  
+        ECR_REPO = 'react-frontend'
+        AWS_ACCOUNT_ID = '009160053341'
+        IMAGE_TAG = "react-frontend:${env.BUILD_NUMBER}"
     }
-
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/bharth360/multi-service-app.git'
+                git branch: 'main', url: 'https://github.com/bharth360/multi-service-app.git'
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Login to AWS ECR') {
             steps {
-                sh 'docker compose build'
+                script {
+                    sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                }
             }
         }
 
-        stage('Deploy Services') {
+        stage('Build Docker Image') {
             steps {
-                sh 'docker compose up -d'
+                script {
+                    sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ./frontend"
+                }
             }
         }
 
-        stage('Health Check') {
+        stage('Tag Docker Image') {
             steps {
-                sh 'curl -f http://localhost || exit 1'
+                script {
+                    sh "docker tag ${ECR_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
+                }
             }
         }
-    }
 
-    post {
-        failure {
-            mail to: 'bharateshshanavad@gmail.com',
-                 subject: '🚨 Jenkins Deployment Failed!',
-                 body: 'The latest deployment of multi-service-app failed. Check Jenkins logs for details.'
+        stage('Push Image to ECR') {
+            steps {
+                script {
+                    sh "docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Clean Up') {
+            steps {
+                script {
+                    sh "docker rmi ${ECR_REPO}:${IMAGE_TAG} || true"
+                    sh "docker rmi ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG} || true"
+                }
+            }
         }
     }
 }
