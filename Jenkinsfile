@@ -1,15 +1,21 @@
 pipeline {
     agent any
+    
+    parameters {
+        string(name: 'TAG', defaultValue: 'latest', description: 'Tag for the Docker image')
+    }
+
     environment {
         AWS_REGION = 'us-east-1'  
         ECR_REPO = 'react-frontend'
         AWS_ACCOUNT_ID = '009160053341'
-        IMAGE_TAG = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_NUMBER}"
+        IMAGE_TAG = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${TAG}"
     }
+
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/bharth360/multi-service-app.git'
+                git branch: 'main', credentialsId: 'github-ssh', url: 'https://github.com/bharth360/multi-service-app.git'
             }
         }
 
